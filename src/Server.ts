@@ -14,7 +14,7 @@ interface OASchemaFile {
   schemas: Record<string, OpenAPI.SchemaObject>;
 }
 
-export default class Server<Context = {}> {
+export class Server<Context = {}> {
   config: ServerConfig<Context>;
   express: express.Express;
   server: HttpServer<typeof HttpIncomingMessage, typeof HttpServerResponse> | undefined;

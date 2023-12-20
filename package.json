@@ -1,11 +1,11 @@
 {
-  "name": "@danplayz0/dapir",
+  "name": "@ashmwtech/dapir",
   "version": "1.0.0",
   "type": "module",
   "description": "An api wrapper",
   "main": "build/index.js",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/@DanPlayz0"
+    "registry": "https://npm.pkg.github.com/@AshMWTech"
   },
   "dependencies": {
     "chalk": "4.1.2",
