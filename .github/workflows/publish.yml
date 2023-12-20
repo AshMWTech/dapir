@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: 20
           registry-url: https://npm.pkg.github.com/
-          scope: "@DanPlayz0"
+          scope: '@AshMWTech'
       - run: npm install
       - run: npm run build
       - run: npm publish --no-git-checks
