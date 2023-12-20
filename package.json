@@ -1,9 +1,16 @@
 {
   "name": "@ashmwtech/dapir",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "An api wrapper",
-  "main": "build/index.js",
+  "source": "src/index.ts",
+  "exports": {
+    "require": "./build/index.cjs",
+    "import": "./build/index.modern.js"
+  },
+  "main": "./build/index.cjs",
+  "module": "./build/index.modern.js",
+  "unpkg": "./build/index.umd.js",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/@AshMWTech"
   },
@@ -22,7 +29,7 @@
   },
   "scripts": {
     "dev": "nodemon --swc --files src/index.ts",
-    "build": "microbundle -i src/index.ts"
+    "build": "microbundle"
   },
   "author": "DanPlayz0",
   "license": "MIT"
