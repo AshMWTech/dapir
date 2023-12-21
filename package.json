@@ -1,13 +1,15 @@
 {
   "name": "@ashmwtech/dapir",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "description": "An api wrapper",
   "source": "src/index.ts",
   "exports": {
+    "types": "./build/index.d.ts",
     "require": "./build/index.cjs",
     "import": "./build/index.modern.js"
   },
+  "types": "./build/index.d.ts",
   "main": "./build/index.cjs",
   "module": "./build/index.modern.js",
   "unpkg": "./build/index.umd.js",
