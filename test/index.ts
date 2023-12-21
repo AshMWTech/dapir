@@ -1,4 +1,5 @@
-import { Server, HTTPContext } from '../src';
+process.chdir(__dirname);
+import { Server, HTTPContext } from '../src/index';
 
 const context = {
   test: 'test',
@@ -13,12 +14,12 @@ const api = new Server<typeof context>({
   },
   routes: {
     enabled: true,
-    folder: 'test/routes',
+    folder: './routes',
     context: context,
     documentation: {
       enabled: true,
       path: '/docs',
-      private_key: 'asdsada',
+      private_key: 'yes',
     },
   },
   websocket: {

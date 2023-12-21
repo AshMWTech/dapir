@@ -1,6 +1,6 @@
 {
   "name": "@ashmwtech/dapir",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "description": "An api wrapper",
   "source": "src/index.ts",
@@ -30,7 +30,6 @@
     "prettier": "^3.1.1"
   },
   "scripts": {
-    "dev": "nodemon --swc --files src/index.ts",
     "build": "microbundle"
   },
   "author": "DanPlayz0",
