@@ -1,6 +1,6 @@
 {
   "name": "@ashmwtech/dapir",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "description": "An api wrapper",
   "source": "src/index.ts",
@@ -12,7 +12,6 @@
   "types": "./build/index.d.ts",
   "main": "./build/index.cjs",
   "module": "./build/index.modern.js",
-  "unpkg": "./build/index.umd.js",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/@AshMWTech"
   },
@@ -32,7 +31,7 @@
   },
   "scripts": {
     "prebuild": "rimraf build",
-    "build": "microbundle"
+    "build": "microbundle -f cjs,esm --no-sourcemap"
   },
   "author": "DanPlayz0",
   "license": "MIT"
