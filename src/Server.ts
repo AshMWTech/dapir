@@ -56,7 +56,8 @@ export class Server<Context = {}> {
         log('info', `Found ${filteredDocFiles.length} documentation files`);
         for (const file of filteredDocFiles) {
           if (file.directory) continue;
-          const imported = await import(file.path);
+
+          const imported = await import(file.fullPath);
           if (!imported) continue;
 
           const doc = imported as OASchemaFile;
@@ -86,7 +87,7 @@ export class Server<Context = {}> {
       for (const file of filteredRoutes) {
         if (file.directory) continue;
 
-        const imported = await import(file.path);
+        const imported = await import(file.fullPath);
         if (!imported) continue;
 
         // Apparently the bundler has no clue wtf "this" is when used like "this.routeHandler<HTTPContext>"
