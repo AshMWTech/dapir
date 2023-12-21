@@ -1,4 +1,4 @@
-import express, { Handler } from 'express';
+import express from 'express';
 import log from './utils/log';
 import { WebSocketServer } from 'ws';
 import { Server as HttpServer, IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http';
@@ -21,22 +21,68 @@ export class Server<Context = {}> {
   startedAt: Date | null;
   wss: WebSocketServer | undefined;
   documentation: Documentation | undefined;
+  middleware: RouteMiddleware[];
 
   constructor(config: ServerConfig<Context>) {
     this.config = config;
 
     this.wss = config.websocket.enabled ? config.websocket.wss || new WebSocketServer({ noServer: true }) : undefined;
     this.documentation = config.routes.enabled && config.routes.documentation.enabled ? new Documentation() : undefined;
+    this.middleware = config?.routes?.middleware || [];
 
     this.startedAt = null;
     this.express = express();
   }
 
+  validateConfig() {
+    if (this.config.routes.enabled) {
+      if (!this.config.routes.folder) return log('error', 'Routes folder is not defined');
+      if (!this.config.routes.context) return log('error', 'Routes context is not defined');
+      if (!this.config.routes.middleware) return log('error', 'Routes middleware is not defined');
+      if (this.config.routes.middleware) {
+        for (const middleware of this.config.routes.middleware) {
+          if (!middleware.name) return log('error', 'Middleware must have a name');
+          if (!middleware.when) return log('error', `Middleware '${middleware.name}' needs a 'when' property`);
+          if (!middleware.handle) return log('error', `Middleware '${middleware.name}' needs a 'handle' property`);
+          if (typeof middleware.handle != 'function') return log('error', `Middleware '${middleware.name}' handle must be a function`);
+        }
+      }
+      if (this.config.routes.documentation.enabled) {
+        if (!this.config.routes.documentation.path) return log('error', 'Routes documentation path is not defined');
+        if (!this.config.routes.documentation.private_key) return log('error', 'Routes documentation private_key is not defined');
+      }
+    }
+    if (this.config.websocket.enabled) {
+      if (!this.config.websocket.path) return log('error', 'Websocket path is not defined');
+    }
+    return true;
+  }
+
+  addMiddleware(routeMiddleWare: RouteMiddleware) {
+    if (this.startedAt !== null) return log('error', 'Cannot add middleware after server has started');
+    if (!routeMiddleWare.name) return log('error', 'Middleware must have a name');
+    if (!routeMiddleWare.when) return log('error', `Middleware '${routeMiddleWare.name}' needs a 'when' property`);
+    if (!routeMiddleWare.handle) return log('error', `Middleware '${routeMiddleWare.name}' needs a 'handle' property`);
+    if (typeof routeMiddleWare.handle != 'function') return log('error', `Middleware '${routeMiddleWare.name}' handle must be a function`);
+    this.middleware.push(routeMiddleWare);
+  }
+
+  removeMiddleware(name: string) {
+    if (this.startedAt !== null) return log('error', 'Cannot remove middleware after server has started');
+    this.middleware = this.middleware.filter((x) => x.name != name);
+  }
+
   private async init(key?: string) {
-    if (key != 'startup') log('info', 'Initializing server...');
+    if (key != 'listen_init') return;
+    const runMiddleware = async (when: MiddlewareWhen) => {
+      const middleware = this.middleware.filter((x) => x.when == when).sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+      middleware.forEach((x) => this.express.use(x.handle));
+    }
+    runMiddleware('init')
     this.express.use(express.json({ limit: '50mb' }));
     this.express.use(express.urlencoded({ extended: true, limit: '50mb' }));
     if (this.config.cors.enabled) {
+      runMiddleware('precors')
       this.express.use((req, res, next) => {
         //@ts-expect-error Cors is enabled... stupid typescript
         if (this.config.cors.origin != '*') res.header('Access-Control-Allow-Origin', this.config.cors.origin);
@@ -47,10 +93,12 @@ export class Server<Context = {}> {
         if (req.method == 'OPTIONS') return res.status(204).send();
         next();
       });
+      runMiddleware('postcors');
     }
     if (this.config.routes.enabled) {
       const files = await indexFolder(this.config.routes.folder);
       if (this.config.routes.documentation.enabled) {
+        runMiddleware('predocs');
         if (!this.documentation) this.documentation = new Documentation();
         const filteredDocFiles = files.filter((x) => !x.directory).filter((x) => /^(oa\-schema)\.(js|ts)$/.test(x.name));
         log('info', `Found ${filteredDocFiles.length} documentation files`);
@@ -76,12 +124,15 @@ export class Server<Context = {}> {
             this.documentation.addSchema(schemaName, doc.schemas[schemaName], doc.publicSchemas);
           }
         }
+        log('debug', `Loaded GET ${this.config.routes.documentation.path}`);
         this.express.get(this.config.routes.documentation.path, (req, res, next) => {
           // @ts-expect-error Documentation is enabled
           return res.send(this.documentation?.build(req.query?.key != (this.config.routes.documentation.private_key as string)));
         });
+        runMiddleware('postdocs');
       }
 
+      runMiddleware('preroutes');
       const filteredRoutes = files.filter((x) => !x.directory).filter((x) => /^(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
       log('info', `Found ${filteredRoutes.length} route files`);
       for (const file of filteredRoutes) {
@@ -130,7 +181,9 @@ export class Server<Context = {}> {
 
         this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), routeFunc);
       }
+      runMiddleware('postroutes');
     }
+    runMiddleware('finish');
   }
 
   /**
@@ -139,9 +192,10 @@ export class Server<Context = {}> {
   routeHandler<MoreContext = {}>(ctx: Context & MoreContext): any {}
 
   async listen() {
+    if (this.validateConfig() != true) return;
     if (this.startedAt !== null) return log('error', 'Server already listening');
     this.startedAt = new Date();
-    await this.init();
+    await this.init('listen_init');
     if (this.config.websocket.enabled && this.wss == undefined) {
       this.wss = new WebSocketServer({ noServer: true });
     }
@@ -176,6 +230,15 @@ export class Server<Context = {}> {
   }
 }
 
+type MiddlewareFunction = (req: express.Request, res: express.Response, next: express.NextFunction) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
+type MiddlewareWhen = 'init' | 'precors' | 'postcors' | 'predocs' | 'postdocs' | 'preroutes' | 'postroutes' | 'finish';
+interface RouteMiddleware {
+  name: string;
+  when: MiddlewareWhen;
+  priority?: number;
+  handle: MiddlewareFunction;
+}
+
 export interface ServerConfig<Context = {}> {
   port: number;
   host: string;
@@ -184,6 +247,7 @@ export interface ServerConfig<Context = {}> {
     enabled: boolean;
     folder: string;
     context: Context;
+    middleware: RouteMiddleware[];
     documentation:
       | { enabled: false }
       | {
