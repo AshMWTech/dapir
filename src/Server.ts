@@ -5,7 +5,7 @@ import { Server as HttpServer, IncomingMessage as HttpIncomingMessage, ServerRes
 import indexFolder from './utils/indexFolder';
 import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
 import Documentation, { APIInfoObject } from './documentation';
-import { HTTPContext, RouteFile } from './types/httprouter';
+import { HTTPContext, RouteFile, errorResponse } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
 
 interface OASchemaFile {
@@ -249,7 +249,7 @@ export class Server<Context = {}> {
   }
 }
 
-type CtxMiddlewareFunction<Context> = (ctx: Context & HTTPContext) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
+type CtxMiddlewareFunction<Context> = (ctx: Context & HTTPContext) => (express.NextFunction | errorResponse | void) | Promise<express.NextFunction | errorResponse | void>;
 type MiddlewareFunction = (req: express.Request, res: express.Response, next: express.NextFunction) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
 type MiddlewareWhen = 'init' | 'precors' | 'postcors' | 'predocs' | 'postdocs' | 'preroutes' | 'postroutes' | 'finish';
 interface RouteMiddleware {
