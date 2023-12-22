@@ -135,6 +135,24 @@ export class Server<Context = {}> {
       runMiddleware('preroutes');
       const filteredRoutes = files.filter((x) => !x.directory).filter((x) => /^(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
       log('info', `Found ${filteredRoutes.length} route files`);
+      let authFunc = null;
+      (() => {
+        if (this.config.routes?.security?.authentication) {
+          const auth = this.config.routes.security.authentication;
+          if (!auth.enabled) return log('error', 'Authentication is enabled but no authentication function is defined');
+          if (!auth.handle) return log('error', 'Authentication is enabled but no authentication function is defined');
+          if (typeof auth.handle != 'function') return log('error', 'Authentication handle must be a function');
+
+          authFunc = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+            const errorResponse = (status: HttpStatus, opts?: { message?: string; data?: any; code?: string }) => {
+              return res
+                .status(status)
+                .send({ error: true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
+            };
+            return auth.handle({ ...this.config.routes.context, req, res, next, errorResponse });
+          };
+        }
+      })();
       for (const file of filteredRoutes) {
         if (file.directory) continue;
 
@@ -179,7 +197,8 @@ export class Server<Context = {}> {
           }
         };
 
-        this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), routeFunc);
+        if (route.configuration.security?.authentication && authFunc != null) this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), authFunc, routeFunc);
+        else this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), routeFunc);
       }
       runMiddleware('postroutes');
     }
@@ -230,6 +249,7 @@ export class Server<Context = {}> {
   }
 }
 
+type CtxMiddlewareFunction<Context> = (ctx: Context & HTTPContext) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
 type MiddlewareFunction = (req: express.Request, res: express.Response, next: express.NextFunction) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
 type MiddlewareWhen = 'init' | 'precors' | 'postcors' | 'predocs' | 'postdocs' | 'preroutes' | 'postroutes' | 'finish';
 interface RouteMiddleware {
@@ -248,6 +268,14 @@ export interface ServerConfig<Context = {}> {
     folder: string;
     context: Context;
     middleware: RouteMiddleware[];
+    security?: {
+      authentication?:
+        | { enabled: false }
+        | {
+            enabled: true;
+            handle: CtxMiddlewareFunction<Context>;
+          };
+    }
     documentation:
       | { enabled: false }
       | {
