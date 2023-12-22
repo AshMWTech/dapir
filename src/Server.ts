@@ -4,7 +4,7 @@ import { WebSocketServer } from 'ws';
 import { Server as HttpServer, IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http';
 import indexFolder from './utils/indexFolder';
 import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
-import Documentation from './documentation';
+import Documentation, { APIInfoObject } from './documentation';
 import { HTTPContext, RouteFile } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
 
@@ -27,7 +27,7 @@ export class Server<Context = {}> {
     this.config = config;
 
     this.wss = config.websocket.enabled ? config.websocket.wss || new WebSocketServer({ noServer: true }) : undefined;
-    this.documentation = config.routes.enabled && config.routes.documentation.enabled ? new Documentation() : undefined;
+    this.documentation = config.routes.enabled && config.routes.documentation.enabled ? new Documentation(config.routes.documentation.open_api) : undefined;
     this.middleware = config?.routes?.middleware || [];
 
     this.startedAt = null;
@@ -280,6 +280,7 @@ export interface ServerConfig<Context = {}> {
       | { enabled: false }
       | {
           enabled: true;
+          open_api: APIInfoObject;
           path: string;
           private_key: string;
         };

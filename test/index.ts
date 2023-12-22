@@ -18,6 +18,25 @@ const api = new Server<typeof context>({
     context: context,
     documentation: {
       enabled: true,
+      open_api: {
+        info: {
+          title: 'Test API',
+          version: '1.0.0',
+          license: {
+            name: 'MIT',
+            identifier: 'MIT',
+          }
+        },
+        externalDocs: {
+          url: 'https://example.com',
+          description: 'Example Documentation',
+        },
+        servers: [
+          {
+            url: 'https://example.com/',
+          }
+        ],
+      },
       path: '/docs',
       private_key: 'yes',
     },

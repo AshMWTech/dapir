@@ -31,7 +31,7 @@ export default class Documentation {
   schemaNames: Set<string>;
   defaultObject: APIInfoObject;
 
-  constructor() {
+  constructor(openAPIObject?: APIInfoObject) {
     this.docs = { 
       public: {paths: {}, schemas: {}}, 
       private: {paths: {}, schemas: {}}
@@ -56,6 +56,7 @@ export default class Documentation {
         }
       ],
     }
+    if(openAPIObject) this.setup(openAPIObject);
 
     this.operationIds = new Set();
     this.schemaNames = new Set();
