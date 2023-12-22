@@ -1,4 +1,4 @@
-import type { OpenAPIV3_1 as OpenAPI, OpenAPIV3 } from 'openapi-types';
+import type { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
 import log from "../utils/log";
 import type { RouteDocumentation } from './route';
 

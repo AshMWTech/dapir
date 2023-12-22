@@ -1,4 +1,3 @@
-import type { Context } from './context';
 import { IncomingMessage } from 'http';
 import type { WebSocket } from 'ws';
 import { Documentation } from './documentation';
@@ -12,7 +11,6 @@ export interface RouteConfig {
   enabled: boolean;
   security?: {
     authentication?: boolean;
-    forAdminOnly?: boolean;
   };
   documentation: Documentation;
 }
@@ -23,7 +21,7 @@ export interface WSContext {
   req: IncomingMessage;
 };
 
-export type RawSocketContext = Context & WSContext;
+export type RawSocketContext = WSContext;
 export type RawSocketHandler = (ctx: RawSocketContext) => Promise<any> | any;
 
 export type SocketContext = RawSocketContext & {
