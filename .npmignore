@@ -3,3 +3,5 @@
 /prettier.config.js
 /.vscode
 /node_modules
+/tsconfig.json
+/.github
