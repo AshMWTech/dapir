@@ -1,4 +1,4 @@
-import type { Response, Request, NextFunction } from 'express';
+import express from 'express';
 import { Documentation } from './documentation';
 import { HttpStatus } from '../utils/httpStatus';
 
@@ -17,9 +17,9 @@ export interface RouteConfig {
 
 export interface HTTPContext {
   // HTTP Context
-  req: Request;
-  res: Response;
-  next: NextFunction;
+  req: express.Request;
+  res: express.Response;
+  next: express.NextFunction;
   errorResponse: (
     status: HttpStatus,
     opts?: {
@@ -27,7 +27,7 @@ export interface HTTPContext {
       data?: any;
       code?: string;
     },
-  ) => Response<any, Record<string, any>>;
+  ) => express.Response<any, Record<string, any>>;
 }
 
 // Converted to `export type RouteHandler = typeof api.routeHandler<HTTPContext>;`
