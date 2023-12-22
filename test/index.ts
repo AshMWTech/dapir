@@ -16,6 +16,16 @@ const api = new Server<typeof context>({
     enabled: true,
     folder: './routes',
     context: context,
+    middleware: [
+      {
+        name: 'test',
+        when: 'precors',
+        handle: async (req, res, next) => {
+          console.log('this is before anything ever happens!');
+          next();
+        },
+      }
+    ],
     documentation: {
       enabled: true,
       open_api: {
@@ -48,4 +58,15 @@ const api = new Server<typeof context>({
 
 export type RouteHandler = typeof api.routeHandler<HTTPContext>;
 
+// Prior to starting the server, you can middleware
+// api.addMiddleware({
+//   name: 'test',
+//   when: 'precors',
+//   middleware: async (req, res, next) => {
+//     console.log('this is before anything ever happens!');
+//     next();
+//   },
+// });
+
+// Start the server
 api.listen();
