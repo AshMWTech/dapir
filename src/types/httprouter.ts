@@ -15,7 +15,7 @@ export interface RouteConfig {
   documentation: Documentation;
 }
 
-export type errorResponse = (
+export type ErrorResponse = (
   status: HttpStatus,
   opts?: {
     message?: string;
@@ -24,12 +24,14 @@ export type errorResponse = (
   },
 ) => express.Response<any, Record<string, any>>;
 
+export type ExpressErrorResponse = express.Response<any, Record<string, any>>;
+
 export interface HTTPContext {
   // HTTP Context
   req: express.Request;
   res: express.Response;
   next: express.NextFunction;
-  errorResponse: errorResponse;
+  errorResponse: ErrorResponse;
 }
 
 // Converted to `export type RouteHandler = typeof api.routeHandler<HTTPContext>;`

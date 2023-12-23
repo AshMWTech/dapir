@@ -4,6 +4,9 @@
   "type": "module",
   "description": "An api wrapper",
   "source": "src/index.ts",
+  "files": [
+    "build"
+  ],
   "exports": {
     "types": "./build/index.d.ts",
     "require": "./build/index.cjs",
