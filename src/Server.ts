@@ -150,7 +150,12 @@ export class Server<Context = {}> {
                 .status(status)
                 .send({ error: true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
             };
-            return auth.handle({ ...this.config.routes.context, req, res, next, errorResponse });
+            try {
+              return auth.handle({ ...this.config.routes.context, req, res, next, errorResponse });
+            } catch (err) {
+              log('error', `Middleware Error: ${(err as Error).message}`);
+              return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, { message: (err as Error).message, code: 'ERROR_UNKNOWN_MIDDLEWARE' });
+            }
           };
         }
       })();
@@ -191,10 +196,10 @@ export class Server<Context = {}> {
           };
 
           try {
-            await route.handler({ ...this.config.routes.context, req, res, next, errorResponse });
+            return route.handler({ ...this.config.routes.context, req, res, next, errorResponse });
           } catch (error) {
             log('error', (error as Error).message ?? 'Unknown error');
-            return res.status(500).json({ error: (error as Error).message ?? 'Unknown error' });
+            return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, { message: (error as Error).message ?? "Unknown error", code: "ERROR_UNKNOWN_ROUTE"})
           }
         };
 
