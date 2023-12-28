@@ -4,8 +4,8 @@ import { WebSocketServer } from 'ws';
 import { Server as HttpServer, IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http';
 import indexFolder from './utils/indexFolder';
 import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
-import Documentation, { APIInfoObject } from './documentation';
-import { HTTPContext, RouteFile, ExpressErrorResponse, RouteConfig, RouteAuthenticationMethodWithData } from './types/httprouter';
+import Documentation from './documentation';
+import { HTTPContext, RouteFile, RouteConfig, RouteAuthenticationMethodWithData } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
 import { AuthenticationMethods, MiddlewareWhen, RouteMiddleware, ServerConfig } from './types/server';
 
