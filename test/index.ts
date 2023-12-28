@@ -5,7 +5,7 @@ const context = {
   test: 'test',
 };
 
-const api = new Server<typeof context>({
+const api = new Server({
   port: 3000,
   host: '0.0.0.0',
   cors: {
@@ -16,6 +16,17 @@ const api = new Server<typeof context>({
     enabled: true,
     folder: './routes',
     context: context,
+    security: {
+      authentication: {
+        enabled: true,
+        methods: {
+          loggedIn: () => undefined,
+          hasPermission: (ctx, { penis }: { penis: boolean }) => undefined,
+          needsBot: () => undefined,
+          cumInAssable: () => undefined,
+        },
+      },
+    },
     middleware: [
       {
         name: 'test',
@@ -24,7 +35,7 @@ const api = new Server<typeof context>({
           console.log('this is before anything ever happens!');
           next();
         },
-      }
+      },
     ],
     documentation: {
       enabled: true,
@@ -35,7 +46,7 @@ const api = new Server<typeof context>({
           license: {
             name: 'MIT',
             identifier: 'MIT',
-          }
+          },
         },
         externalDocs: {
           url: 'https://example.com',
@@ -44,7 +55,7 @@ const api = new Server<typeof context>({
         servers: [
           {
             url: 'https://example.com/',
-          }
+          },
         ],
       },
       path: '/docs',
@@ -56,7 +67,10 @@ const api = new Server<typeof context>({
   },
 });
 
+// Export necessary shit
 export type RouteHandler = typeof api.routeHandler<HTTPContext>;
+export type RouteConfig = typeof api.routeConfig;
+export const authenticationMethod = api.authenticationMethod;
 
 // Prior to starting the server, you can middleware
 // api.addMiddleware({

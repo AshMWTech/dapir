@@ -1,16 +1,27 @@
 import express from 'express';
 import { Documentation } from './documentation';
 import { HttpStatus } from '../utils/httpStatus';
+import { AuthenticationMethods } from './server';
 
 export interface RouteFile<Handler> {
-  configuration?: RouteConfig;
+  configuration?: RouteConfig<any, any>;
   handler: Handler;
 }
 
-export interface RouteConfig {
+export interface RouteAuthenticationMethodWithData<
+  Context extends {},
+  Methods extends AuthenticationMethods<Context>,
+  Method extends keyof Methods = keyof Methods,
+> {
+  method: Method;
+  // This should be the type of the specified method above, but it is a union of all the possible types.
+  data: any;
+}
+
+export interface RouteConfig<Context extends {}, Methods extends AuthenticationMethods<Context>> {
   enabled: boolean;
   security?: {
-    authentication?: boolean;
+    authentication?: (RouteAuthenticationMethodWithData<Context, Methods> | keyof Methods)[];
   };
   documentation: Documentation;
 }

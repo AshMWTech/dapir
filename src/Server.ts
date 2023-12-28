@@ -5,9 +5,9 @@ import { Server as HttpServer, IncomingMessage as HttpIncomingMessage, ServerRes
 import indexFolder from './utils/indexFolder';
 import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
 import Documentation, { APIInfoObject } from './documentation';
-import { HTTPContext, RouteFile, ExpressErrorResponse } from './types/httprouter';
+import { HTTPContext, RouteFile, ExpressErrorResponse, RouteConfig, RouteAuthenticationMethodWithData } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
-import { MiddlewareWhen, RouteMiddleware, ServerConfig } from './types/server';
+import { AuthenticationMethods, MiddlewareWhen, RouteMiddleware, ServerConfig } from './types/server';
 
 interface OASchemaFile {
   enabled: boolean;
@@ -15,8 +15,8 @@ interface OASchemaFile {
   schemas: Record<string, OpenAPI.SchemaObject>;
 }
 
-export class Server<Context = {}> {
-  config: ServerConfig<Context>;
+export class Server<Context extends {}, Methods extends AuthenticationMethods<Context>> {
+  config: ServerConfig<Context, Methods>;
   express: express.Express;
   server: HttpServer<typeof HttpIncomingMessage, typeof HttpServerResponse> | undefined;
   startedAt: Date | null;
@@ -24,11 +24,21 @@ export class Server<Context = {}> {
   documentation: Documentation | undefined;
   middleware: RouteMiddleware[];
 
-  constructor(config: ServerConfig<Context>) {
+  // types: Used to generate type, ignore safely
+  routeConfig: RouteConfig<Context, Methods>;
+  routeHandler<MoreContext = {}>(ctx: Context & MoreContext): any {}
+  // /types
+
+  constructor(config: ServerConfig<Context, Methods>) {
     this.config = config;
 
+    // types: Used to generate type, ignore safely
+    this.routeConfig = {} as any;
+    // /types
+
     this.wss = config.websocket.enabled ? config.websocket.wss || new WebSocketServer({ noServer: true }) : undefined;
-    this.documentation = config.routes.enabled && config.routes.documentation.enabled ? new Documentation(config.routes.documentation.open_api) : undefined;
+    this.documentation =
+      config.routes.enabled && config.routes.documentation.enabled ? new Documentation(config.routes.documentation.open_api) : undefined;
     this.middleware = config?.routes?.middleware || [];
 
     this.startedAt = null;
@@ -78,12 +88,12 @@ export class Server<Context = {}> {
     const runMiddleware = async (when: MiddlewareWhen) => {
       const middleware = this.middleware.filter((x) => x.when == when).sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
       middleware.forEach((x) => this.express.use(x.handle));
-    }
-    runMiddleware('init')
+    };
+    runMiddleware('init');
     this.express.use(express.json({ limit: '50mb' }));
     this.express.use(express.urlencoded({ extended: true, limit: '50mb' }));
     if (this.config.cors.enabled) {
-      runMiddleware('precors')
+      runMiddleware('precors');
       this.express.use((req, res, next) => {
         //@ts-expect-error Cors is enabled... stupid typescript
         if (this.config.cors.origin != '*') res.header('Access-Control-Allow-Origin', this.config.cors.origin);
@@ -141,8 +151,8 @@ export class Server<Context = {}> {
         if (this.config.routes?.security?.authentication) {
           const auth = this.config.routes.security.authentication;
           if (!auth.enabled) return log('error', 'Authentication is enabled but no authentication function is defined');
-          if (!auth.handle) return log('error', 'Authentication is enabled but no authentication function is defined');
-          if (typeof auth.handle != 'function') return log('error', 'Authentication handle must be a function');
+          // if (!auth.handle) return log('error', 'Authentication is enabled but no authentication function is defined');
+          // if (typeof auth.handle != 'function') return log('error', 'Authentication handle must be a function');
 
           authFunc = (req: express.Request, res: express.Response, next: express.NextFunction) => {
             const errorResponse = (status: HttpStatus, opts?: { message?: string; data?: any; code?: string }) => {
@@ -151,7 +161,7 @@ export class Server<Context = {}> {
                 .send({ error: true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
             };
             try {
-              return auth.handle({ ...this.config.routes.context, req, res, next, errorResponse });
+              // return auth.handle({ ...this.config.routes.context, req, res, next, errorResponse });
             } catch (err) {
               log('error', `Middleware Error: ${(err as Error).message}`);
               return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, { message: (err as Error).message, code: 'ERROR_UNKNOWN_MIDDLEWARE' });
@@ -199,22 +209,21 @@ export class Server<Context = {}> {
             return route.handler({ ...this.config.routes.context, req, res, next, errorResponse });
           } catch (error) {
             log('error', (error as Error).message ?? 'Unknown error');
-            return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, { message: (error as Error).message ?? "Unknown error", code: "ERROR_UNKNOWN_ROUTE"})
+            return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, {
+              message: (error as Error).message ?? 'Unknown error',
+              code: 'ERROR_UNKNOWN_ROUTE',
+            });
           }
         };
 
-        if (route.configuration.security?.authentication && authFunc != null) this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), authFunc, routeFunc);
+        if (route.configuration.security?.authentication && authFunc != null)
+          this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), authFunc, routeFunc);
         else this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), routeFunc);
       }
       runMiddleware('postroutes');
     }
     runMiddleware('finish');
   }
-
-  /**
-   * @description Allows you for type-safe shit ig
-   */
-  routeHandler<MoreContext = {}>(ctx: Context & MoreContext): any {}
 
   async listen() {
     if (this.validateConfig() != true) return;
@@ -253,5 +262,15 @@ export class Server<Context = {}> {
     this.server?.close();
     this.wss?.close();
   }
-}
 
+  /**
+   * Helper Functions
+   */
+
+  authenticationMethod<Method extends keyof Methods>(
+    method: Method,
+    data: Parameters<Methods[Method]>[1],
+  ): RouteAuthenticationMethodWithData<Context, Methods, Method> {
+    return { method, data } as RouteAuthenticationMethodWithData<Context, Methods, Method>;
+  }
+}
