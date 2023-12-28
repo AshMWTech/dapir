@@ -5,7 +5,7 @@ interface Data {
   where: string;
 }
 
-export const hasPermission: CtxMiddlewareFunction<Context> = (ctx, data: Data) => {
+export const hasPermission: CtxMiddlewareFunction<Context, Data> = (ctx, data) => {
   console.log(data.where);
   return ctx.next();
 };

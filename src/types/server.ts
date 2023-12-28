@@ -3,9 +3,9 @@ import { ExpressErrorResponse, HTTPContext } from './httprouter';
 import { APIInfoObject } from 'documentation';
 import { WebSocketServer } from 'ws';
 
-export type CtxMiddlewareFunction<Context = {}> = (
+export type CtxMiddlewareFunction<Context = {}, Data = any> = (
   ctx: Context & HTTPContext,
-  data?: any,
+  data: Data,
 ) => (express.NextFunction | ExpressErrorResponse | void) | Promise<express.NextFunction | ExpressErrorResponse | void>;
 export type MiddlewareFunction = (
   req: express.Request,
