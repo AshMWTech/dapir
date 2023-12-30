@@ -7,7 +7,7 @@ import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
 import Documentation from './documentation';
 import { HTTPContext, RouteFile, RouteConfig, RouteAuthenticationMethodWithData } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
-import { AuthenticationMethods, MiddlewareWhen, RouteMiddleware, ServerConfig } from './types/server';
+import { AuthenticationMethods, CtxMiddlewareFunction, MiddlewareWhen, RouteMiddleware, ServerConfig } from './types/server';
 
 interface OASchemaFile {
   enabled: boolean;
@@ -146,29 +146,6 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
       runMiddleware('preroutes');
       const filteredRoutes = files.filter((x) => !x.directory).filter((x) => /^(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
       log('info', `Found ${filteredRoutes.length} route files`);
-      let authFunc = null;
-      (() => {
-        if (this.config.routes?.security?.authentication) {
-          const auth = this.config.routes.security.authentication;
-          if (!auth.enabled) return log('error', 'Authentication is enabled but no authentication function is defined');
-          // if (!auth.handle) return log('error', 'Authentication is enabled but no authentication function is defined');
-          // if (typeof auth.handle != 'function') return log('error', 'Authentication handle must be a function');
-
-          authFunc = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-            const errorResponse = (status: HttpStatus, opts?: { message?: string; data?: any; code?: string }) => {
-              return res
-                .status(status)
-                .send({ error: true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
-            };
-            try {
-              // return auth.handle({ ...this.config.routes.context, req, res, next, errorResponse });
-            } catch (err) {
-              log('error', `Middleware Error: ${(err as Error).message}`);
-              return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, { message: (err as Error).message, code: 'ERROR_UNKNOWN_MIDDLEWARE' });
-            }
-          };
-        }
-      })();
       for (const file of filteredRoutes) {
         if (file.directory) continue;
 
@@ -196,6 +173,23 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
 
         log('debug', `Loaded route ${method.toUpperCase()} ${routePath}`);
 
+        let routeAuth: { method: string; data: object; handle: CtxMiddlewareFunction<Context> }[] = [];
+        if (this.config.routes.security?.authentication?.enabled)
+          for (let authMethod of route.configuration?.security?.authentication ?? []) {
+            let authName = String(typeof authMethod == 'object' ? authMethod.method : authMethod);
+            let authData = typeof authMethod == 'object' ? authMethod.data : undefined;
+            if (!authName) {
+              log('error', `Route ${file.name} has an invalid authentication method '${authName}'`);
+              continue;
+            }
+            let serverMethod = this.config.routes.security.authentication.methods[authName];
+            if (!serverMethod) {
+              log('error', `Route ${file.name} has an invalid authentication method '${authName}'`);
+              continue;
+            }
+            routeAuth.push({ method: authName, data: authData, handle: serverMethod });
+          }
+
         if (this.documentation) this.documentation.addRoute(route.configuration?.documentation, routePath, method);
 
         const routeFunc = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -205,20 +199,25 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
               .send({ error: true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
           };
 
+          for (let auth of routeAuth) {
+            let worked = false;
+            let goNext = () => (worked = true);
+            await auth.handle({ ...this.config.routes.context, req, res, next: goNext, errorResponse }, auth.data);
+            if (worked == false) return;
+          }
+
           try {
             return route.handler({ ...this.config.routes.context, req, res, next, errorResponse });
           } catch (error) {
             log('error', (error as Error).message ?? 'Unknown error');
             return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, {
               message: (error as Error).message ?? 'Unknown error',
-              code: 'ERROR_UNKNOWN_ROUTE',
+              code: 'UNKNOWN_ROUTE_ERROR',
             });
           }
         };
 
-        if (route.configuration.security?.authentication && authFunc != null)
-          this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), authFunc, routeFunc);
-        else this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), routeFunc);
+        this.express[method](routePath.replace(/\[([^\]]+)\]/g, ':$1'), routeFunc);
       }
       runMiddleware('postroutes');
     }

@@ -3,9 +3,16 @@ import { ExpressErrorResponse, HTTPContext } from './httprouter';
 import { APIInfoObject } from 'documentation';
 import { WebSocketServer } from 'ws';
 
+// interface MiddlewareDataDynamic {
+//   dynamic: true;
+//   where: 'body' | 'query' | 'header';
+//   name: string | string[];
+// }
+// type MiddlewareData = Record<string, any | MiddlewareDataDynamic>;
+
 export type CtxMiddlewareFunction<Context = {}, Data = any> = (
   ctx: Context & HTTPContext,
-  data: Data,
+  data?: Data,
 ) => (express.NextFunction | ExpressErrorResponse | void) | Promise<express.NextFunction | ExpressErrorResponse | void>;
 export type MiddlewareFunction = (
   req: express.Request,

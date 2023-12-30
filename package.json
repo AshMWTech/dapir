@@ -1,6 +1,6 @@
 {
   "name": "@ashmwtech/dapir",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "type": "module",
   "description": "An api wrapper",
   "source": "src/index.ts",
