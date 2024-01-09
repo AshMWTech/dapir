@@ -12,7 +12,7 @@ import { WebSocketServer } from 'ws';
 
 export type CtxMiddlewareFunction<Context = {}, Data = any> = (
   ctx: Context & HTTPContext,
-  data?: Data,
+  data: Data,
 ) => (express.NextFunction | ExpressErrorResponse | void) | Promise<express.NextFunction | ExpressErrorResponse | void>;
 export type MiddlewareFunction = (
   req: express.Request,
