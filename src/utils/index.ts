@@ -1,4 +1,4 @@
 export * from './httpStatus';
-export * from './log';
+export {default as log} from './log';
 export * from './snowflake';
 export * from './indexFolder';
