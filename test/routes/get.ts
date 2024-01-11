@@ -11,7 +11,7 @@ export const configuration: RouteConfig = {
   security: {
     authentication: [
       'loggedIn',
-      authenticationMethod('hasPermission', { where: (req) =>  }),
+      authenticationMethod('hasPermission', { where: (req) => req.query.any as string }),
       {
         method: 'cumInAssable',
         data: 'anything',
