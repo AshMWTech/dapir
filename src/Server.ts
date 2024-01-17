@@ -144,8 +144,11 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
       }
 
       runMiddleware('preroutes');
-      const filteredRoutes = files.filter((x) => !x.directory).filter((x) => /^(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
+      const keywordRoutes = files.filter((x) => !x.directory).filter((x) => /^(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
+      const namedRoutes = files.filter((x) => !x.directory).filter((x) => /^(.*)\.(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
+      const filteredRoutes = [...keywordRoutes, ...namedRoutes];
       log('info', `Found ${filteredRoutes.length} route files`);
+      let routesInit = new Set();
       for (const file of filteredRoutes) {
         if (file.directory) continue;
 
@@ -163,15 +166,24 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
           continue;
         }
 
-        const routeName = file.name.match(/[ \w-]+?(?=\.)/)?.[0] ?? 'route';
+        const routeName = file.name.split('.').slice(-2)?.[0] ?? 'route';
         const method = routeName as 'get' | 'put' | 'patch' | 'post' | 'delete' | 'head';
         let routePath = file.path
           .replace(/\\/g, '/')
           .replace(/^routes/, '')
           .replace(/\(([^\)]+)\)\//g, '');
         if (routePath.length == 0) routePath = '/';
+        
+        const namedPortion = file.name.split('.').slice(0, -2);
+        if (namedPortion.length > 0) routePath += '/' + namedPortion.join('.');
 
         log('debug', `Loaded route ${method.toUpperCase()} ${routePath}`);
+
+        if (routesInit.has(method+routePath)) {
+          log('error', ` ↳ [Router | Aborted] Duplicate path & method combination found.`);
+          continue;
+        }
+        routesInit.add(method+routePath);
 
         let routeAuth: { method: string; data: object; handle: CtxMiddlewareFunction<Context> }[] = [];
         if (this.config.routes.security?.authentication?.enabled)
