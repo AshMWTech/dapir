@@ -8,6 +8,7 @@ import Documentation from './documentation';
 import { HTTPContext, RouteFile, RouteConfig, RouteAuthenticationMethodWithData } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
 import { AuthenticationMethods, CtxMiddlewareFunction, MiddlewareWhen, RouteMiddleware, ServerConfig } from './types/server';
+import cookieParser from 'cookie-parser';
 
 interface OASchemaFile {
   enabled: boolean;
@@ -92,6 +93,7 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
     runMiddleware('init');
     this.express.use(express.json({ limit: '50mb' }));
     this.express.use(express.urlencoded({ extended: true, limit: '50mb' }));
+    this.express.use(cookieParser());
     if (this.config.cors.enabled) {
       runMiddleware('precors');
       this.express.use((req, res, next) => {
