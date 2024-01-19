@@ -211,15 +211,16 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
               .send({ error: true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
           };
 
+          const variables = new Map();
           for (let auth of routeAuth) {
             let worked = false;
             let goNext = () => (worked = true);
-            await auth.handle({ ...this.config.routes.context, req, res, next: goNext, errorResponse }, auth.data);
+            await auth.handle({ ...this.config.routes.context, req, res, next: goNext, errorResponse, variables }, auth.data);
             if (worked == false) return;
           }
 
           try {
-            return route.handler({ ...this.config.routes.context, req, res, next, errorResponse });
+            return route.handler({ ...this.config.routes.context, req, res, next, errorResponse, variables });
           } catch (error) {
             log('error', (error as Error).message ?? 'Unknown error');
             return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, {

@@ -43,6 +43,7 @@ export interface HTTPContext {
   res: express.Response;
   next: express.NextFunction;
   errorResponse: ErrorResponse;
+  variables: Map<string, any>;
 }
 
 // Converted to `export type RouteHandler = typeof api.routeHandler<HTTPContext>;`
