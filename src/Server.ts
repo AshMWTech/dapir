@@ -146,9 +146,8 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
       }
 
       runMiddleware('preroutes');
-      const keywordRoutes = files.filter((x) => !x.directory).filter((x) => /^(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
-      const namedRoutes = files.filter((x) => !x.directory).filter((x) => /^(.*)\.(get|put|patch|post|delete|head)\.(js|ts)$/.test(x.name));
-      const filteredRoutes = [...keywordRoutes, ...namedRoutes];
+      const keywordRouteRegex = /^(get|put|patch|post|delete|head)\.(js|ts)$/, namedRouteRegex = /^(.*)\.(get|put|patch|post|delete|head)\.(js|ts)$/;
+      const filteredRoutes = files.filter((x) => !x.directory).filter((x) => keywordRouteRegex.test(x.name) || namedRouteRegex.test(x.name));
       log('info', `Found ${filteredRoutes.length} route files`);
       let routesInit = new Set();
       for (const file of filteredRoutes) {
