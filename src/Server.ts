@@ -7,7 +7,7 @@ import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
 import Documentation from './documentation';
 import { HTTPContext, RouteFile, RouteConfig, RouteAuthenticationMethodWithData } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
-import { AuthenticationMethods, CtxMiddlewareFunction, MiddlewareWhen, RouteMiddleware, ServerConfig } from './types/server';
+import { LocalRouteMethods, CtxMiddlewareFunction, MiddlewareWhen, ServerConfigMiddleware, ServerConfig, GlobalRouteMiddleware } from './types/server';
 import cookieParser from 'cookie-parser';
 
 interface OASchemaFile {
@@ -16,14 +16,14 @@ interface OASchemaFile {
   schemas: Record<string, OpenAPI.SchemaObject>;
 }
 
-export class Server<Context extends {}, Methods extends AuthenticationMethods<Context>> {
+export class Server<Context extends {}, Methods extends LocalRouteMethods<Context>> {
   config: ServerConfig<Context, Methods>;
   express: express.Express;
   server: HttpServer<typeof HttpIncomingMessage, typeof HttpServerResponse> | undefined;
   startedAt: Date | null;
   wss: WebSocketServer | undefined;
   documentation: Documentation | undefined;
-  middleware: RouteMiddleware[];
+  middleware: ServerConfigMiddleware<Context, Methods>;
 
   // types: Used to generate type, ignore safely
   routeConfig: RouteConfig<Context, Methods>;
@@ -40,7 +40,10 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
     this.wss = config.websocket.enabled ? config.websocket.wss || new WebSocketServer({ noServer: true }) : undefined;
     this.documentation =
       config.routes.enabled && config.routes.documentation.enabled ? new Documentation(config.routes.documentation.open_api) : undefined;
-    this.middleware = config?.routes?.middleware || [];
+    this.middleware = {
+      global: config?.routes?.middleware.global ?? [],
+      local: config?.routes?.middleware.local ?? {},
+    }
 
     this.startedAt = null;
     this.express = express();
@@ -52,11 +55,11 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
       if (!this.config.routes.context) return log('error', 'Routes context is not defined');
       if (!this.config.routes.middleware) return log('error', 'Routes middleware is not defined');
       if (this.config.routes.middleware) {
-        for (const middleware of this.config.routes.middleware) {
-          if (!middleware.name) return log('error', 'Middleware must have a name');
-          if (!middleware.when) return log('error', `Middleware '${middleware.name}' needs a 'when' property`);
-          if (!middleware.handle) return log('error', `Middleware '${middleware.name}' needs a 'handle' property`);
-          if (typeof middleware.handle != 'function') return log('error', `Middleware '${middleware.name}' handle must be a function`);
+        for (const middleware of this.config.routes.middleware.global) {
+          if (!middleware.name) return log('error', 'Global middleware must have a name');
+          if (!middleware.when) return log('error', `Global middleware '${middleware.name}' needs a 'when' property`);
+          if (!middleware.handle) return log('error', `Global middleware '${middleware.name}' needs a 'handle' property`);
+          if (typeof middleware.handle != 'function') return log('error', `Global middleware '${middleware.name}' handle must be a function`);
         }
       }
       if (this.config.routes.documentation.enabled) {
@@ -70,24 +73,24 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
     return true;
   }
 
-  addMiddleware(routeMiddleWare: RouteMiddleware) {
+  addMiddleware(routeMiddleWare: GlobalRouteMiddleware) {
     if (this.startedAt !== null) return log('error', 'Cannot add middleware after server has started');
     if (!routeMiddleWare.name) return log('error', 'Middleware must have a name');
     if (!routeMiddleWare.when) return log('error', `Middleware '${routeMiddleWare.name}' needs a 'when' property`);
     if (!routeMiddleWare.handle) return log('error', `Middleware '${routeMiddleWare.name}' needs a 'handle' property`);
     if (typeof routeMiddleWare.handle != 'function') return log('error', `Middleware '${routeMiddleWare.name}' handle must be a function`);
-    this.middleware.push(routeMiddleWare);
+    this.middleware.global.push(routeMiddleWare);
   }
 
   removeMiddleware(name: string) {
     if (this.startedAt !== null) return log('error', 'Cannot remove middleware after server has started');
-    this.middleware = this.middleware.filter((x) => x.name != name);
+    this.middleware.global = this.middleware.global.filter((x) => x.name != name);
   }
 
   private async init(key?: string) {
     if (key != 'listen_init') return;
     const runMiddleware = async (when: MiddlewareWhen) => {
-      const middleware = this.middleware.filter((x) => x.when == when).sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+      const middleware = this.middleware.global.filter((x) => x.when == when).sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
       middleware.forEach((x) => this.express.use(x.handle));
     };
     runMiddleware('init');
@@ -186,21 +189,21 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
         }
         routesInit.add(method+routePath);
 
-        let routeAuth: { method: string; data: object; handle: CtxMiddlewareFunction<Context> }[] = [];
-        if (this.config.routes.security?.authentication?.enabled)
-          for (let authMethod of route.configuration?.security?.authentication ?? []) {
+        let routeMiddleware: { method: string; data: object; handle: CtxMiddlewareFunction<Context> }[] = [];
+        if (Object.keys(this.config.routes.middleware.local).length > 0)
+          for (let authMethod of route.configuration?.middleware ?? []) {
             let authName = String(typeof authMethod == 'object' ? authMethod.method : authMethod);
             let authData = typeof authMethod == 'object' ? authMethod.data : undefined;
             if (!authName) {
-              log('error', `Route ${file.name} has an invalid authentication method '${authName}'`);
+              log('error', `Route ${file.name} has an invalid un-named local middleware`);
               continue;
             }
-            let serverMethod = this.config.routes.security.authentication.methods[authName];
+            let serverMethod = this.config.routes.middleware.local?.[authName];
             if (!serverMethod) {
-              log('error', `Route ${file.name} has an invalid authentication method '${authName}'`);
+              log('error', `Route ${file.name} has a local middleware named '${authName}' that is not present within the server config`);
               continue;
             }
-            routeAuth.push({ method: authName, data: authData, handle: serverMethod });
+            routeMiddleware.push({ method: authName, data: authData, handle: serverMethod });
           }
 
         if (this.documentation) this.documentation.addRoute(route.configuration?.documentation, routePath, method);
@@ -213,7 +216,7 @@ export class Server<Context extends {}, Methods extends AuthenticationMethods<Co
           };
 
           const variables = new Map();
-          for (let auth of routeAuth) {
+          for (let auth of routeMiddleware) {
             let worked = false;
             let goNext = () => (worked = true);
             await auth.handle({ ...this.config.routes.context, req, res, next: goNext, errorResponse, variables }, auth.data);

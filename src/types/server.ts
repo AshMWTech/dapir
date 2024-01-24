@@ -20,25 +20,30 @@ export type MiddlewareFunction = (
   next: express.NextFunction,
 ) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
 export type MiddlewareWhen = 'init' | 'precors' | 'postcors' | 'predocs' | 'postdocs' | 'preroutes' | 'postroutes' | 'finish';
-export interface RouteMiddleware {
+export interface GlobalRouteMiddleware {
   name: string;
   when: MiddlewareWhen;
   priority?: number;
   handle: MiddlewareFunction;
 }
 
-export interface AuthenticationMethods<Context = {}> {
+export interface LocalRouteMethods<Context = {}> {
   [key: string]: CtxMiddlewareFunction<Context>;
 }
 
-export type Authentication<Context, Methods extends AuthenticationMethods<Context>> =
-  | { enabled: false }
-  | {
-      enabled: true;
-      methods: Methods;
-    };
+// export type LocalRouteMiddleware<Context, Methods extends LocalRouteMethods<Context>> =
+//   | { enabled: false }
+//   | {
+//       enabled: true;
+//       methods: Methods;
+//     };
 
-export interface ServerConfig<Context extends {}, Methods extends AuthenticationMethods<Context>> {
+export interface ServerConfigMiddleware<Context extends {}, Methods extends LocalRouteMethods<Context>> {
+  global: GlobalRouteMiddleware[];
+  local: Methods;
+};
+
+export interface ServerConfig<Context extends {}, Methods extends LocalRouteMethods<Context>> {
   port: number;
   host: string;
   cors: { enabled: false } | { enabled: true; origin: string };
@@ -46,10 +51,7 @@ export interface ServerConfig<Context extends {}, Methods extends Authentication
     enabled: boolean;
     folder: string;
     context: Context;
-    middleware: RouteMiddleware[];
-    security?: {
-      authentication?: Authentication<Context, Methods>;
-    };
+    middleware: ServerConfigMiddleware<Context, Methods>;
     documentation:
       | { enabled: false }
       | {

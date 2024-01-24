@@ -1,7 +1,7 @@
 import express from 'express';
 import { Documentation } from './documentation';
 import { HttpStatus } from '../utils/httpStatus';
-import { AuthenticationMethods } from './server';
+import { LocalRouteMethods } from './server';
 
 export interface RouteFile<Handler> {
   configuration?: RouteConfig<any, any>;
@@ -10,7 +10,7 @@ export interface RouteFile<Handler> {
 
 export interface RouteAuthenticationMethodWithData<
   Context extends {},
-  Methods extends AuthenticationMethods<Context>,
+  Methods extends LocalRouteMethods<Context>,
   Method extends keyof Methods = keyof Methods,
 > {
   method: Method;
@@ -18,11 +18,9 @@ export interface RouteAuthenticationMethodWithData<
   data: any;
 }
 
-export interface RouteConfig<Context extends {}, Methods extends AuthenticationMethods<Context>> {
+export interface RouteConfig<Context extends {}, Methods extends LocalRouteMethods<Context>> {
   enabled: boolean;
-  security?: {
-    authentication?: (RouteAuthenticationMethodWithData<Context, Methods> | keyof Methods)[];
-  };
+  middleware?: (RouteAuthenticationMethodWithData<Context, Methods> | keyof Methods)[];
   documentation: Documentation;
 }
 
