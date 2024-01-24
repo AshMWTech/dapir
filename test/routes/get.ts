@@ -8,14 +8,12 @@ export const configuration: RouteConfig = {
     public: false,
     operationId: 'api_root',
   },
-  security: {
-    authentication: [
-      'loggedIn',
-      authenticationMethod('hasPermission', { where: (req) => req.query.any as string }),
-      {
-        method: 'cumInAssable',
-        data: 'anything',
-      },
-    ],
-  },
+  middleware: [
+    'loggedIn',
+    authenticationMethod('hasPermission', { where: (req) => req.query.any as string }),
+    {
+      method: 'cumInAssable',
+      data: 'anything',
+    },
+  ],
 };

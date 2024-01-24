@@ -17,27 +17,24 @@ const api = new Server({
     enabled: true,
     folder: './routes',
     context: context,
-    security: {
-      authentication: {
-        enabled: true,
-        methods: {
-          loggedIn: () => undefined,
-          hasPermission,
-          needsBot: () => undefined,
-          cumInAssable: () => undefined,
+    middleware: {
+      global: [
+        {
+          name: 'test',
+          when: 'precors',
+          handle: async (req, res, next) => {
+            console.log('this is before anything ever happens!');
+            next();
+          },
         },
+      ],
+      local: {
+        loggedIn: () => undefined,
+        hasPermission,
+        needsBot: () => undefined,
+        cumInAssable: () => undefined,
       },
     },
-    middleware: [
-      {
-        name: 'test',
-        when: 'precors',
-        handle: async (req, res, next) => {
-          console.log('this is before anything ever happens!');
-          next();
-        },
-      },
-    ],
     documentation: {
       enabled: true,
       open_api: {
