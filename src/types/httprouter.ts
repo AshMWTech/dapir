@@ -24,23 +24,24 @@ export interface RouteConfig<Context extends {}, Methods extends LocalRouteMetho
   documentation: Documentation;
 }
 
-export type ErrorResponse = (
+export type GenericResponse = (
   status: HttpStatus,
   opts?: {
+    error?: boolean;
     message?: string;
     data?: any;
     code?: string;
   },
 ) => express.Response<any, Record<string, any>>;
 
-export type ExpressErrorResponse = express.Response<any, Record<string, any>>;
+export type ExpressGenericResponse = express.Response<any, Record<string, any>>;
 
 export interface HTTPContext {
   // HTTP Context
   req: express.Request;
   res: express.Response;
   next: express.NextFunction;
-  errorResponse: ErrorResponse;
+  respond: GenericResponse;
   variables: Map<string, any>;
 }
 

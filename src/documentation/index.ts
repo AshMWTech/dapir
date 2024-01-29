@@ -60,6 +60,32 @@ export default class Documentation {
 
     this.operationIds = new Set();
     this.schemaNames = new Set();
+
+    this.addSchema("GenericResponse", {
+      type: "object",
+      required: ["success", "code", "status"],
+      properties: {
+        error: {
+          type: "boolean",
+          description: "Whether the request errored."
+        },
+        status: {
+          type: "number",
+          description: "The HTTP status code.",
+        },
+        code: {
+          type: "string",
+          description: "The error code."
+        },
+        message: {
+          type: "string",
+          description: "The error message.",
+        },
+        data: {
+          description: "The validation error messages."
+        }
+      }
+    });
   }
 
   addSchema(name: string, schema: OpenAPI.SchemaObject, publicSchema = false) {

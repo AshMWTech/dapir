@@ -209,25 +209,25 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
         if (this.documentation) this.documentation.addRoute(route.configuration?.documentation, routePath, method);
 
         const routeFunc = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-          const errorResponse = (status: HttpStatus, opts?: { message?: string; data?: any; code?: string }) => {
+          const respond = (status: HttpStatus, opts?: { error?: boolean, message?: string; data?: any; code?: string }) => {
             return res
               .status(status)
-              .send({ error: true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
+              .send({ error: opts?.error ?? true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
           };
 
           const variables = new Map();
           for (let auth of routeMiddleware) {
             let worked = false;
             let goNext = () => (worked = true);
-            await auth.handle({ ...this.config.routes.context, req, res, next: goNext, errorResponse, variables }, auth.data);
+            await auth.handle({ ...this.config.routes.context, req, res, next: goNext, respond, variables }, auth.data);
             if (worked == false) return;
           }
 
           try {
-            return route.handler({ ...this.config.routes.context, req, res, next, errorResponse, variables });
+            return route.handler({ ...this.config.routes.context, req, res, next, respond, variables });
           } catch (error) {
             log('error', (error as Error).message ?? 'Unknown error');
-            return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, {
+            return respond(HttpStatus.INTERNAL_SERVER_ERROR, {
               message: (error as Error).message ?? 'Unknown error',
               code: 'UNKNOWN_ROUTE_ERROR',
             });

@@ -1,5 +1,5 @@
 import express from 'express';
-import { ExpressErrorResponse, HTTPContext } from './httprouter';
+import { ExpressGenericResponse, HTTPContext } from './httprouter';
 import { APIInfoObject } from 'documentation';
 import { WebSocketServer } from 'ws';
 
@@ -13,7 +13,7 @@ import { WebSocketServer } from 'ws';
 export type CtxMiddlewareFunction<Context = {}, Data = any> = (
   ctx: Context & HTTPContext,
   data: Data,
-) => (express.NextFunction | ExpressErrorResponse | void) | Promise<express.NextFunction | ExpressErrorResponse | void>;
+) => (express.NextFunction | ExpressGenericResponse | void) | Promise<express.NextFunction | ExpressGenericResponse | void>;
 export type MiddlewareFunction = (
   req: express.Request,
   res: express.Response,
