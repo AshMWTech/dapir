@@ -47,6 +47,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
 
     this.startedAt = null;
     this.express = express();
+    this.express.disable('x-powered-by');
   }
 
   validateConfig() {
@@ -238,6 +239,11 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
       }
       runMiddleware('postroutes');
     }
+    runMiddleware('pre404');
+    this.express.use('*', (req,res) => {
+      return res.status(404).send({ error: true, status: 404, code: HttpStatus[404], message: "Page not found" });
+    })
+    runMiddleware('post404');
     runMiddleware('finish');
   }
 

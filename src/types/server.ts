@@ -19,7 +19,7 @@ export type MiddlewareFunction = (
   res: express.Response,
   next: express.NextFunction,
 ) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
-export type MiddlewareWhen = 'init' | 'precors' | 'postcors' | 'predocs' | 'postdocs' | 'preroutes' | 'postroutes' | 'finish';
+export type MiddlewareWhen = 'init' | 'precors' | 'postcors' | 'predocs' | 'postdocs' | 'preroutes' | 'postroutes' | 'pre404' | 'post404' |'finish';
 export interface GlobalRouteMiddleware {
   name: string;
   when: MiddlewareWhen;
