@@ -16,12 +16,12 @@ interface OASchemaFile {
   schemas: Record<string, OpenAPI.SchemaObject>;
 }
 
-export class Server<Context extends {}, Methods extends LocalRouteMethods<Context>, WS extends typeof WebSocket> {
+export class Server<Context extends {}, Methods extends LocalRouteMethods<Context>, WSS extends WebSocketServer<WS>, WS extends typeof WebSocket = typeof WebSocket> {
   config: ServerConfig<Context, Methods, WS>;
   express: express.Express;
   server: HttpServer<typeof HttpIncomingMessage, typeof HttpServerResponse> | undefined;
   startedAt: Date | null;
-  wss: WebSocketServer<WS> | undefined;
+  wss: WSS | undefined;
   documentation: Documentation | undefined;
   middleware: ServerConfigMiddleware<Context, Methods>;
 
@@ -37,7 +37,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
     this.routeConfig = {} as any;
     // /types
 
-    this.wss = config.websocket.enabled ? config.websocket.wss || new WebSocketServer<WS>({ noServer: true }) : undefined;
+    this.wss = config.websocket.enabled ? (config.websocket.wss || new WebSocketServer<WS>({ noServer: true })) as WSS : undefined;
     this.documentation =
       config.routes.enabled && config.routes.documentation.enabled ? new Documentation(config.routes.documentation.open_api) : undefined;
     this.middleware = {
@@ -253,7 +253,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
     this.startedAt = new Date();
     await this.init('listen_init');
     if (this.config.websocket.enabled && this.wss == undefined) {
-      this.wss = new WebSocketServer<WS>({ noServer: true });
+      this.wss = new WebSocketServer<WS>({ noServer: true }) as WSS;
     }
     const server = this.express.listen(this.config.port, this.config.host, () => {
       log('ready', `Server listening at http://${this.config.host}:${this.config.port}`);
@@ -276,7 +276,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
         return;
       }
 
-      this.wss.handleUpgrade(request, socket, head, (ws) => (this.wss as WebSocketServer<WS>).emit('connection', ws, request));
+      this.wss.handleUpgrade(request, socket, head, (ws) => (this.wss as WSS).emit('connection', ws, request));
     });
   }
 
