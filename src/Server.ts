@@ -1,6 +1,6 @@
 import express from 'express';
 import log from './utils/log';
-import { WebSocketServer } from 'ws';
+import { WebSocket, Server as WebSocketServer } from 'ws';
 import { Server as HttpServer, IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http';
 import indexFolder from './utils/indexFolder';
 import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
@@ -16,12 +16,12 @@ interface OASchemaFile {
   schemas: Record<string, OpenAPI.SchemaObject>;
 }
 
-export class Server<Context extends {}, Methods extends LocalRouteMethods<Context>> {
-  config: ServerConfig<Context, Methods>;
+export class Server<Context extends {}, Methods extends LocalRouteMethods<Context>, WS extends typeof WebSocket> {
+  config: ServerConfig<Context, Methods, WS>;
   express: express.Express;
   server: HttpServer<typeof HttpIncomingMessage, typeof HttpServerResponse> | undefined;
   startedAt: Date | null;
-  wss: WebSocketServer | undefined;
+  wss: WebSocketServer<WS> | undefined;
   documentation: Documentation | undefined;
   middleware: ServerConfigMiddleware<Context, Methods>;
 
@@ -30,14 +30,14 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
   routeHandler<MoreContext = {}>(ctx: Context & MoreContext): any {}
   // /types
 
-  constructor(config: ServerConfig<Context, Methods>) {
+  constructor(config: ServerConfig<Context, Methods, WS>) {
     this.config = config;
 
     // types: Used to generate type, ignore safely
     this.routeConfig = {} as any;
     // /types
 
-    this.wss = config.websocket.enabled ? config.websocket.wss || new WebSocketServer({ noServer: true }) : undefined;
+    this.wss = config.websocket.enabled ? config.websocket.wss || new WebSocketServer<WS>({ noServer: true }) : undefined;
     this.documentation =
       config.routes.enabled && config.routes.documentation.enabled ? new Documentation(config.routes.documentation.open_api) : undefined;
     this.middleware = {
@@ -253,7 +253,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
     this.startedAt = new Date();
     await this.init('listen_init');
     if (this.config.websocket.enabled && this.wss == undefined) {
-      this.wss = new WebSocketServer({ noServer: true });
+      this.wss = new WebSocketServer<WS>({ noServer: true });
     }
     const server = this.express.listen(this.config.port, this.config.host, () => {
       log('ready', `Server listening at http://${this.config.host}:${this.config.port}`);
@@ -276,7 +276,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
         return;
       }
 
-      this.wss.handleUpgrade(request, socket, head, (ws) => (this.wss as WebSocketServer).emit('connection', ws, request));
+      this.wss.handleUpgrade(request, socket, head, (ws) => (this.wss as WebSocketServer<WS>).emit('connection', ws, request));
     });
   }
 

@@ -1,7 +1,7 @@
 import express from 'express';
 import { ExpressGenericResponse, HTTPContext } from './httprouter';
 import { APIInfoObject } from 'documentation';
-import { WebSocketServer } from 'ws';
+import { WebSocket, Server as WebSocketServer } from 'ws';
 
 // interface MiddlewareDataDynamic {
 //   dynamic: true;
@@ -43,7 +43,7 @@ export interface ServerConfigMiddleware<Context extends {}, Methods extends Loca
   local: Methods;
 };
 
-export interface ServerConfig<Context extends {}, Methods extends LocalRouteMethods<Context>> {
+export interface ServerConfig<Context extends {}, Methods extends LocalRouteMethods<Context>, WS extends typeof WebSocket = typeof WebSocket> {
   port: number;
   host: string;
   cors: { enabled: false } | { enabled: true; origin: string };
@@ -66,6 +66,6 @@ export interface ServerConfig<Context extends {}, Methods extends LocalRouteMeth
     | {
         enabled: true;
         path: string;
-        wss?: WebSocketServer;
+        wss?: WebSocketServer<WS>;
       };
 }
