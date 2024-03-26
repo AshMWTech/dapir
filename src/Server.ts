@@ -260,7 +260,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
     });
     this.server = server;
     server.on('upgrade', (request, socket, head) => {
-      if (this.config.websocket.enabled == false || this.config.websocket.path !== request.url) {
+      if (this.config.websocket.enabled == false || new URL(request.url!).host == this.config.websocket.path ) {
         socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
         socket.destroy();
         return;
