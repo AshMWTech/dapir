@@ -1,5 +1,5 @@
 {
-  "name": "@ashmwtech/dapir",
+  "name": "dapir",
   "version": "1.3.3",
   "type": "module",
   "description": "An api wrapper",
@@ -15,9 +15,6 @@
   "types": "./build/index.d.ts",
   "main": "./build/index.cjs",
   "module": "./build/index.modern.js",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/@AshMWTech"
-  },
   "dependencies": {
     "chalk": "4.1.2",
     "cookie-parser": "^1.4.6",
