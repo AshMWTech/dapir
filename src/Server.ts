@@ -176,11 +176,12 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
         let routePath = file.path
           .replace(/\\/g, '/')
           .replace(/^routes/, '')
-          .replace(/\(([^\)]+)\)\//g, '');
-        if (routePath.length == 0) routePath = '/';
-        
+          .replace(/\([^\)]+\)/g, '');
+
         const namedPortion = file.name.split('.').slice(0, -2);
         if (namedPortion.length > 0) routePath += '/' + namedPortion.join('.');
+        if (routePath.length == 0) routePath = '/';
+        routePath = routePath.replace(/\/+/g, '/');
 
         log('debug', `Loaded route ${method.toUpperCase()} ${routePath}`);
 

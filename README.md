@@ -12,7 +12,7 @@ Create your API route file
 
 ```ts
 process.chdir(__dirname);
-import { Server, HTTPContext } from '@ashmwtech/dapir';
+import { Server, HTTPContext } from 'dapir';
 
 // Context that will be passed throughout app (databases, wrappers, etc)
 const context = {
