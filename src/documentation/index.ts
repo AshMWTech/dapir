@@ -63,7 +63,7 @@ export default class Documentation {
 
     this.addSchema("GenericResponse", {
       type: "object",
-      required: ["success", "code", "status"],
+      required: ["error", "code", "status", "message"],
       properties: {
         error: {
           type: "boolean",
