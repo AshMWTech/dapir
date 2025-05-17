@@ -14,12 +14,18 @@ export type CtxMiddlewareFunction<Context = {}, Data = any> = (
   ctx: Context & HTTPContext,
   data: Data,
 ) => (express.NextFunction | ExpressGenericResponse | void) | Promise<express.NextFunction | ExpressGenericResponse | void>;
-export type MiddlewareFunction = (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) => (express.NextFunction | void) | Promise<express.NextFunction | void>;
-export type MiddlewareWhen = 'init' | 'precors' | 'postcors' | 'predocs' | 'postdocs' | 'preroutes' | 'postroutes' | 'pre404' | 'post404' |'finish';
+export type MiddlewareFunction = (req: express.Request, res: express.Response, next: express.NextFunction) => void | Promise<void>;
+export type MiddlewareWhen =
+  | 'init'
+  | 'precors'
+  | 'postcors'
+  | 'predocs'
+  | 'postdocs'
+  | 'preroutes'
+  | 'postroutes'
+  | 'pre404'
+  | 'post404'
+  | 'finish';
 export interface GlobalRouteMiddleware {
   name: string;
   when: MiddlewareWhen;
@@ -41,9 +47,13 @@ export interface LocalRouteMethods<Context = {}> {
 export interface ServerConfigMiddleware<Context extends {}, Methods extends LocalRouteMethods<Context>> {
   global: GlobalRouteMiddleware[];
   local: Methods;
-};
+}
 
-export interface ServerConfig<Context extends {}, Methods extends LocalRouteMethods<Context>, WS extends typeof WebSocket = typeof WebSocket> {
+export interface ServerConfig<
+  Context extends {},
+  Methods extends LocalRouteMethods<Context>,
+  WS extends typeof WebSocket = typeof WebSocket,
+> {
   port: number;
   host: string;
   cors: { enabled: false } | { enabled: true; origin: string };

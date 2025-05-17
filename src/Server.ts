@@ -7,7 +7,14 @@ import { OpenAPIV3_1 as OpenAPI } from 'openapi-types';
 import Documentation from './documentation';
 import { HTTPContext, RouteFile, RouteConfig, RouteAuthenticationMethodWithData } from './types/httprouter';
 import { HttpStatus } from 'utils/httpStatus';
-import { LocalRouteMethods, CtxMiddlewareFunction, MiddlewareWhen, ServerConfigMiddleware, ServerConfig, GlobalRouteMiddleware } from './types/server';
+import {
+  LocalRouteMethods,
+  CtxMiddlewareFunction,
+  MiddlewareWhen,
+  ServerConfigMiddleware,
+  ServerConfig,
+  GlobalRouteMiddleware,
+} from './types/server';
 import cookieParser from 'cookie-parser';
 
 interface OASchemaFile {
@@ -16,7 +23,12 @@ interface OASchemaFile {
   schemas: Record<string, OpenAPI.SchemaObject>;
 }
 
-export class Server<Context extends {}, Methods extends LocalRouteMethods<Context>, WSS extends WebSocketServer<WS>, WS extends typeof WebSocket = typeof WebSocket> {
+export class Server<
+  Context extends {},
+  Methods extends LocalRouteMethods<Context>,
+  WSS extends WebSocketServer<WS>,
+  WS extends typeof WebSocket = typeof WebSocket,
+> {
   config: ServerConfig<Context, Methods, WS>;
   express: express.Express;
   server: HttpServer<typeof HttpIncomingMessage, typeof HttpServerResponse> | undefined;
@@ -37,13 +49,13 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
     this.routeConfig = {} as any;
     // /types
 
-    this.wss = config.websocket.enabled ? (config.websocket.wss || new WebSocketServer<WS>({ noServer: true })) as WSS : undefined;
+    this.wss = config.websocket.enabled ? ((config.websocket.wss || new WebSocketServer<WS>({ noServer: true })) as WSS) : undefined;
     this.documentation =
       config.routes.enabled && config.routes.documentation.enabled ? new Documentation(config.routes.documentation.open_api) : undefined;
     this.middleware = {
       global: config?.routes?.middleware.global ?? [],
       local: config?.routes?.middleware.local ?? {},
-    }
+    };
 
     this.startedAt = null;
     this.express = express();
@@ -60,7 +72,8 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
           if (!middleware.name) return log('error', 'Global middleware must have a name');
           if (!middleware.when) return log('error', `Global middleware '${middleware.name}' needs a 'when' property`);
           if (!middleware.handle) return log('error', `Global middleware '${middleware.name}' needs a 'handle' property`);
-          if (typeof middleware.handle != 'function') return log('error', `Global middleware '${middleware.name}' handle must be a function`);
+          if (typeof middleware.handle != 'function')
+            return log('error', `Global middleware '${middleware.name}' handle must be a function`);
         }
       }
       if (this.config.routes.documentation.enabled) {
@@ -107,8 +120,12 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
         res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
         res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type');
         res.header('Access-Control-Allow-Credentials', 'true');
-        if (req.method == 'OPTIONS') return res.status(204).send();
+        if (req.method == 'OPTIONS') {
+          res.status(204).send();
+          return;
+        }
         next();
+        return;
       });
       runMiddleware('postcors');
     }
@@ -144,14 +161,18 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
         log('debug', `Loaded GET ${this.config.routes.documentation.path}`);
         this.express.get(this.config.routes.documentation.path, (req, res, next) => {
           // @ts-expect-error Documentation is enabled
-          return res.send(this.documentation?.build(req.query?.key != (this.config.routes.documentation.private_key as string)));
+          res.send(this.documentation?.build(req.query?.key != (this.config.routes.documentation.private_key as string)));
+          return;
         });
         runMiddleware('postdocs');
       }
 
       runMiddleware('preroutes');
-      const keywordRouteRegex = /^(get|put|patch|post|delete|head)\.(js|ts)$/, namedRouteRegex = /^(.*)\.(get|put|patch|post|delete|head)\.(js|ts)$/;
-      const filteredRoutes = files.filter((x) => !x.directory).filter((x) => keywordRouteRegex.test(x.name) || namedRouteRegex.test(x.name));
+      const keywordRouteRegex = /^(get|put|patch|post|delete|head)\.(js|ts)$/,
+        namedRouteRegex = /^(.*)\.(get|put|patch|post|delete|head)\.(js|ts)$/;
+      const filteredRoutes = files
+        .filter((x) => !x.directory)
+        .filter((x) => keywordRouteRegex.test(x.name) || namedRouteRegex.test(x.name));
       log('info', `Found ${filteredRoutes.length} route files`);
       let routesInit = new Set();
       for (const file of filteredRoutes) {
@@ -185,11 +206,11 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
 
         log('debug', `Loaded route ${method.toUpperCase()} ${routePath}`);
 
-        if (routesInit.has(method+routePath)) {
+        if (routesInit.has(method + routePath)) {
           log('error', ` ↳ [Router | Aborted] Duplicate path & method combination found.`);
           continue;
         }
-        routesInit.add(method+routePath);
+        routesInit.add(method + routePath);
 
         let routeMiddleware: { method: string; data: object; handle: CtxMiddlewareFunction<Context> }[] = [];
         if (Object.keys(this.config.routes.middleware.local).length > 0)
@@ -211,10 +232,14 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
         if (this.documentation) this.documentation.addRoute(route.configuration?.documentation, routePath, method);
 
         const routeFunc = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-          const respond = (status: HttpStatus, opts?: { error?: boolean, message?: string; data?: any; code?: string }) => {
-            return res
-              .status(status)
-              .send({ error: opts?.error ?? true, status: status, code: opts?.code || HttpStatus[status], message: opts?.message, data: opts?.data });
+          const respond = (status: HttpStatus, opts?: { error?: boolean; message?: string; data?: any; code?: string }) => {
+            return res.status(status).send({
+              error: opts?.error ?? true,
+              status: status,
+              code: opts?.code || HttpStatus[status],
+              message: opts?.message,
+              data: opts?.data,
+            });
           };
 
           const variables = new Map();
@@ -241,9 +266,10 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
       runMiddleware('postroutes');
     }
     runMiddleware('pre404');
-    this.express.use('*notfound', (req,res) => {
-      return res.status(404).send({ error: true, status: 404, code: HttpStatus[404], message: "Page not found" });
-    })
+    this.express.use('*notfound', (req, res) => {
+      res.status(404).send({ error: true, status: 404, code: HttpStatus[404], message: 'Page not found' });
+      return;
+    });
     runMiddleware('post404');
     runMiddleware('finish');
   }
@@ -261,7 +287,11 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
     });
     this.server = server;
     server.on('upgrade', (request, socket, head) => {
-      if (this.config.websocket.enabled == false || !request.url || new URL(request.url, `http://${request.headers.host}`).pathname !== this.config.websocket.path) {
+      if (
+        this.config.websocket.enabled == false ||
+        !request.url ||
+        new URL(request.url, `http://${request.headers.host}`).pathname !== this.config.websocket.path
+      ) {
         socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
         socket.destroy();
         return;
