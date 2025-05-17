@@ -241,7 +241,7 @@ export class Server<Context extends {}, Methods extends LocalRouteMethods<Contex
       runMiddleware('postroutes');
     }
     runMiddleware('pre404');
-    this.express.use('*', (req,res) => {
+    this.express.use('*notfound', (req,res) => {
       return res.status(404).send({ error: true, status: 404, code: HttpStatus[404], message: "Page not found" });
     })
     runMiddleware('post404');
